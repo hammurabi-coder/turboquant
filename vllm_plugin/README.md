@@ -21,7 +21,8 @@ TurboQuant compresses the transformer KV cache from **16 bits/channel (FP16) →
 ## Installation
 
 ```bash
-cd scripts/turboquant
+git clone https://github.com/OnlyTerp/turboquant.git
+cd turboquant
 pip install -e .
 ```
 

@@ -83,7 +83,7 @@ def main():
     print(fmt_bar("-"))
     print(f"  FP16 per vector:        {fp16_bytes:>6} bytes")
     print(f"  TurboQuant per vector:  {tq_bytes:>6} bytes")
-    print(f"  Compression ratio:      {ratio:>6.2f}×")
+    print(f"  Compression ratio:      {ratio:>6.2f}x")
     print(f"  Bits per value:         {(tq_bytes * 8) / D:>6.2f}")
     print()
     print(f"  Total FP16 KV cache:    {total_fp16 / 1024:>8.1f} KB")
