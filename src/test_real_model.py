@@ -79,12 +79,23 @@ def compress_decompress_kv(
             k_flat = k[:, head_idx, :, :].reshape(-1, head_dim).float().to(config.device)
             v_flat = v[:, head_idx, :, :].reshape(-1, head_dim).float().to(config.device)
 
+            # Detect outlier channels for mixed precision (if enabled)
+            mixed = None
+            if config.mixed_precision:
+                safe_norm = k_flat.norm(dim=-1, keepdim=True).clamp(min=1e-10)
+                k_unit = k_flat / safe_norm
+                d_padded = config.d_padded
+                if d_padded != head_dim:
+                    k_unit = torch.nn.functional.pad(k_unit, (0, d_padded - head_dim))
+                y_rot = rotation.forward(k_unit)
+                mixed = config.get_mixed_config(layer_idx, head_idx, y_rot)
+
             # TurboQuant encode
             k_compressed = turboquant_encode_internal(
-                k_flat, config.codebook, rotation, S
+                k_flat, config.codebook, rotation, S, mixed=mixed
             )
             v_compressed = turboquant_encode_internal(
-                v_flat, config.codebook, rotation, S
+                v_flat, config.codebook, rotation, S, mixed=mixed
             )
 
             # Decode — PQ-only (more stable, QJL adds noise for reconstruction)
@@ -199,7 +210,10 @@ def generate_and_compare(model, tokenizer, prompt: str, max_new_tokens: int = 30
         head_dim = _raw_kv[0][0].shape[-1]
         del _test_out, _test_input, _raw_kv
 
-    tq_config = TurboQuantConfig(d=head_dim, b_mse=3, device=device)
+    tq_config = TurboQuantConfig(
+        d=head_dim, b_mse=3, device=device,
+        mixed_precision=True, n_outlier=32, b_outlier=4,
+    )
 
     inputs = tokenizer(prompt, return_tensors="pt").to(device)
     input_ids = inputs.input_ids
@@ -270,8 +284,8 @@ def main():
     print("    TurboQuant -- Real Transformer Model Validation")
     print("=" * 72)
 
-    # Use Nemotron-Nano-4B (same family as TerpBot Pro, fits on 16GB GPU)
-    model_name = "nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1"
+    # Use Llama-3.1-8B-Instruct — the paper's benchmark model (Table 1)
+    model_name = "meta-llama/Llama-3.1-8B-Instruct"
 
     print(f"\n[*] Loading model: {model_name}")
     print("   (first run downloads ~2.2 GB)")
@@ -314,11 +328,17 @@ def main():
     print(f"   Layers: {n_layers}, KV heads: {n_kv_heads}, Head dim: {head_dim}")
     print(f"   Compression ratio: {compression_ratio_fp16(head_dim):.2f}x vs FP16")
 
-    # TurboQuant config (codebook computation is fast for d=64)
-    print(f"\n[*] Building TurboQuant codebook for d={head_dim}...")
+    # TurboQuant config — use mixed-precision (Section 2.3 of paper)
+    # 3.5-bit mode: 32 outlier channels at 4 bits + 96 regular at 3 bits
+    print(f"\n[*] Building TurboQuant codebook for d={head_dim} (mixed-precision 3.5-bit)...")
     t0 = time.time()
-    tq_config = TurboQuantConfig(d=head_dim, b_mse=3, device=device)
+    tq_config = TurboQuantConfig(
+        d=head_dim, b_mse=3, device=device,
+        mixed_precision=True, n_outlier=32, b_outlier=4,
+    )
     print(f"   Codebook ready in {time.time()-t0:.2f}s")
+    print(f"   Mode: 32 outlier channels at 4 bits + {head_dim-32} regular at 3 bits")
+    print(f"   Effective: ~3.5 bits MSE + 1 bit QJL = ~4.5 bits total")
 
     # =====================================================================
     # TEST 1: Next-token logit comparison
