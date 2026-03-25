@@ -23,7 +23,19 @@
 | KIVI | 3 | 48.50 | 0.981 |
 | SnapKV | — | 44.57 | 0.858 |
 
-### 🔧 Our Implementation Results (Mistral-7B-Instruct-v0.3)
+### 🔧 Our Implementation Results (Mistral-7B-Instruct-v0.3, mixed-precision ~4.25 bits)
+
+| Metric | Value |
+|--------|-------|
+| **Logit cosine similarity** | **0.969** |
+| **Top-1 prediction match** | **80% (4/5)** |
+| KV key cosine (per-layer avg) | 0.988 |
+| KV value cosine (per-layer avg) | 0.986 |
+| Effective bits per value | ~4.25 (3.25 MSE + 1 QJL) |
+| Compression | ~3.8× vs FP16 |
+| Generation | Coherent, near-identical to FP16 |
+
+*The 4.92× compression in the architecture section refers to the 2-bit MSE mode (3.25 bits total). Higher quality modes use more bits.*
 
 ## How It Works
 
@@ -74,34 +86,13 @@ python src/demo.py
 python src/test_real_model.py
 ```
 
-## Results
+## Limitations
 
-### Real Model Validation — Mistral-7B-Instruct-v0.3
-
-Mixed-precision 3.5-bit mode (32 outlier channels at 4 bits + 96 regular at 3 bits):
-
-| Metric | Value |
-|--------|-------|
-| **Logit cosine similarity** | **0.969** |
-| **Top-1 prediction match** | **80% (4/5)** |
-| Top-5 overlap | 80% |
-| KV key reconstruction cosine | 0.988 (avg over 32 layers) |
-| KV value reconstruction cosine | 0.986 (avg over 32 layers) |
-| Compression | 4.92× vs FP16 |
-| Generation quality | Coherent, near-identical to FP16 |
-
-Generation example ("In 1969, humans first"):
-- **Normal**: "set foot on the moon. In 2019, we're still waiting for the first human to set fo..."
-- **TurboQuant**: "set foot on the moon. In 2019, we're still waiting for the first human to set fo..."
-
-### Synthetic Vector Benchmark (d=128)
-
-| Metric | Value |
-|--------|-------|
-| Compression ratio | 4.92× vs FP16 |
-| Bits per value | 3.25 |
-| Memory saved | 79.7% |
-| Avg cosine similarity | 0.90 |
+- **Reference implementation** — Pure PyTorch, not optimized for production throughput. Triton kernels are experimental.
+- **CPU attention is slow** — The demo runs on CPU (~25× slower than FP16). GPU kernels needed for competitive speed.
+- **Mixed-precision is approximate** — Our outlier channel detection differs from the paper's theoretically optimal two-independent-instances approach (see IMPLEMENTATION_NOTES.md).
+- **Tested on 2 models** — Mistral-7B-Instruct and Nemotron-Nano-4B. More model validation needed.
+- **vLLM plugin is a scaffold** — Not yet tested with actual vLLM serving.
 
 ## Algorithm Details
 
