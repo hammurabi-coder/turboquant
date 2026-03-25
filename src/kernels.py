@@ -1,15 +1,18 @@
 """
-TurboQuant — Triton GPU Kernels
-================================
+TurboQuant — Triton GPU Kernels (EXPERIMENTAL)
+================================================
+⚠️ WARNING: These Triton kernels use Rademacher (±1) S matrices for QJL,
+while the primary implementation (cache.py) uses Gaussian N(0,1) S matrices
+per the paper's Definition 1. The scaling factor √(π/2)/d is derived for
+Gaussian entries. These kernels are provided as experimental GPU acceleration
+and should NOT be mixed with cache.py encode/decode paths.
+
+The primary (correct) implementation is in cache.py.
+
 Implements the TurboQuant 3-bit KV-cache quantization scheme from:
   "TurboQuant: Online Vector Quantization with Near-optimal Distortion Rate"
   Zandieh, Daliri, Hadian, Mirrokni (Google Research / NYU / Google DeepMind)
   https://arxiv.org/abs/2504.19874
-
-Pipeline:
-  1. PolarQuant  (2 bits/coord) — MSE-optimal rotation + Lloyd-Max quantization
-  2. QJL         (1 bit/coord)  — 1-bit sign quantization of the residual
-  Combined: 3.25 effective bits/value, 4.9× compression vs FP16.
 
 Kernels implemented:
   - fwht_kernel              Fast Walsh-Hadamard Transform (d=128, BLOCK_SIZE=d)

@@ -321,7 +321,7 @@ class TestTurboQuantE2E:
         v_batch = V_fp.unsqueeze(0).unsqueeze(0)
         standard_out = F.scaled_dot_product_attention(q_batch, k_batch, v_batch).squeeze()
 
-        tq_out = cache.compute_attention(0, 0, q, causal=False)
+        tq_out = cache.compute_attention(0, 0, q)
 
         cos_sim = F.cosine_similarity(tq_out.unsqueeze(0), standard_out.unsqueeze(0)).item()
         # Due to stochastic QJL, correlation isn't perfectly 1.0
@@ -340,18 +340,18 @@ class TestTurboQuantE2E:
         ratio = fp16_bits / tq_bits
         assert abs(ratio - 2048 / 416) < 0.001
 
-    def test_turboquant_causal_mask(self):
-        """With causal masking, the last position should attend only to past tokens."""
+    def test_turboquant_single_token_attention(self):
+        """Attention with seq_len=1 should return the single value vector."""
         torch.manual_seed(33)
         cache = TurboQuantCache(1, 1, D, device=DEVICE)
-        K_fp = torch.randn(8, D, device=DEVICE)
-        V_fp = torch.randn(8, D, device=DEVICE)
-        for t in range(8):
-            cache.store(0, 0, K_fp[t], V_fp[t])
+        k = torch.randn(D, device=DEVICE)
+        v = torch.randn(D, device=DEVICE)
+        cache.store(0, 0, k, v)
         q = torch.randn(D, device=DEVICE)
-        out_causal = cache.compute_attention(0, 0, q, causal=True)
-        out_full = cache.compute_attention(0, 0, q, causal=False)
-        assert torch.allclose(out_causal, out_full, atol=1e-6)
+        out = cache.compute_attention(0, 0, q)
+        # With one token, attention weight is 1.0, so output ≈ decoded v
+        v_decoded = polarquant_decode(cache.cache[0][0][0][1].pq).squeeze()
+        assert torch.allclose(out, v_decoded, atol=1e-4)
 
     def test_turboquant_encode_decode_roundtrip(self):
         """Encode → decode should reconstruct well for TurboQuant."""

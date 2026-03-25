@@ -64,7 +64,13 @@ def fwht(x: torch.Tensor) -> torch.Tensor:
 
 
 def fwht_inplace(x: torch.Tensor) -> None:
-    """In-place Fast Walsh-Hadamard Transform."""
+    """In-place Fast Walsh-Hadamard Transform.
+
+    WARNING: x must be contiguous. Non-contiguous tensors will produce
+    incorrect results because reshape may return a copy.
+    """
+    if not x.is_contiguous():
+        raise ValueError("fwht_inplace requires contiguous input. Call .contiguous() first.")
     d = x.shape[-1]
     h = 1
     while h < d:
@@ -823,10 +829,15 @@ class TurboQuantCache:
             self.cache[layer_idx][head_idx].append((k_single, v_single))
 
     def compute_attention(
-        self, layer_idx: int, head_idx: int, q_vec: torch.Tensor, causal: bool = True,
+        self, layer_idx: int, head_idx: int, q_vec: torch.Tensor,
         qjl_score_weight: float = 0.5,
     ) -> torch.Tensor:
-        """Compute attention output using compressed KV cache."""
+        """Compute attention output using compressed KV cache.
+
+        Note: Causal masking is not yet implemented. All stored KV tokens
+        are attended to. For autoregressive generation, this is correct
+        as long as tokens are stored in order.
+        """
         d = self.d
         seq_len = len(self.cache[layer_idx][head_idx])
         if seq_len == 0:
