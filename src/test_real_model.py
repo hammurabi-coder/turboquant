@@ -73,7 +73,6 @@ def compress_decompress_kv(
             S = config.make_qjl_matrix(layer_idx, head_idx)
 
             if layer_idx == 0 and head_idx == 0:
-                print(f"DEBUG: k device={k.device}, config device={config.device}, rotation signs={rotation.signs.device}, S={S.device}")
 
             # Flatten batch × seq_len → [N, head_dim] for vectorized encode
             k_flat = k[:, head_idx, :, :].reshape(-1, head_dim).float().to(config.device)
