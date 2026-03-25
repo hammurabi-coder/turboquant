@@ -1,10 +1,10 @@
 #!/bin/bash
-# TerpBot Pro + TurboQuant — Quick deploy on 5090
+# TurboQuant example deployment on a single GPU
 # Run this on the 5090 PC
 
 set -e
 
-echo "=== TerpBot Pro + TurboQuant Deploy ==="
+echo "=== TurboQuant Example Deploy ==="
 echo ""
 
 # Check GPU
@@ -25,7 +25,7 @@ echo "Building Docker image..."
 docker compose build
 
 echo ""
-echo "Starting TerpBot Pro with TurboQuant..."
+echo "Starting vLLM with TurboQuant..."
 docker compose up -d
 
 echo ""
@@ -38,7 +38,7 @@ for i in $(seq 1 60); do
         echo "Test it:"
         echo '  curl http://localhost:8000/v1/chat/completions \'
         echo '    -H "Content-Type: application/json" \'
-        echo '    -d '"'"'{"model":"terpbot-pro","messages":[{"role":"user","content":"Hello!"}],"max_tokens":100}'"'"''
+        echo '    -d '"'"'{"model":"turboquant-demo","messages":[{"role":"user","content":"Hello!"}],"max_tokens":100}'"'"''
         echo ""
         echo "Logs: docker compose logs -f"
         exit 0

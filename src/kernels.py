@@ -936,7 +936,7 @@ def torch_turboquant_attention(
     d_signs: torch.Tensor,
     qjl_seed: int,
     d: int = 128,
-    qjl_score_weight: float = 0.3,
+    qjl_score_weight: float = 0.5,
 ) -> torch.Tensor:
     """
     Pure-PyTorch TurboQuant attention (CPU/testing).
@@ -984,7 +984,7 @@ def torch_turboquant_attention(
         gen.manual_seed(qjl_seed)
         S = (torch.randint(0, 2, (d, d), generator=gen, device=device).float() * 2 - 1)
 
-        q_proj = q @ S.t()   # [n_queries, d] — equivalent to (S @ q_i) per row
+        q_proj = q @ S       # [n_queries, d] — row-vector form of S @ q_i
         qjl_scale = SQRT_PI_OVER_2 / d
 
         # QJL correction per query

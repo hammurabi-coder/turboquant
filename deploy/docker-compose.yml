@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  terpbot-tq:
+  turboquant-vllm:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -24,7 +24,7 @@ services:
       --enforce-eager
       --trust-remote-code
       --port 8000
-      --served-model-name terpbot-pro
+      --served-model-name turboquant-demo
       --chat-template chatml
     volumes:
       - hf_cache:/root/.cache/huggingface

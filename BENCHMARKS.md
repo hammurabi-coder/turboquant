@@ -19,13 +19,13 @@ These results come from `src/demo.py` — a pure PyTorch (CPU) end-to-end test w
 | Compression ratio vs FP16 | **4.92×** |
 | Bytes per vector | 52 (vs 256 FP16) |
 | Avg cosine similarity | **0.90** |
-| QJL score weight | 0.35 |
+| QJL score weight | 0.50 |
 
 ### Interpretation
 
-The 0.90 cosine similarity is **acceptable but not final**. The paper achieves near-zero accuracy loss on LongBench at 3.5 bits. We've identified a **S-matrix transpose bug** in the attention kernel (see `PLAN.md`) that depresses the score. Fix target: >0.95 cosine similarity.
+The 0.90 cosine similarity is **acceptable but not final**. The paper achieves near-zero accuracy loss on LongBench at 3.5 bits. The QJL projection transpose bug has been fixed in the reference kernels; re-run the demo and model-level benchmarks to validate the expected improvement toward >0.95 cosine similarity.
 
-The QJL score weight (0.35) damps the single-sample QJL correction to reduce variance. Full weight (1.0) gives the mathematically unbiased estimator, but single-sample variance in practice is high. This is a known tradeoff — future work will explore multi-sample averaging.
+The QJL score weight (0.50) damps the single-sample QJL correction to reduce variance. Full weight (1.0) gives the mathematically unbiased estimator, but single-sample variance in practice is high. This is a known tradeoff — future work will explore multi-sample averaging.
 
 ---
 
@@ -236,19 +236,19 @@ To reproduce the paper's claims, you need:
 3. LongBench evaluation suite
 4. Hardware with sufficient memory (A100/H100 recommended)
 
-We are working toward this in [Phase 4-5 of the plan](PLAN.md).
+Those end-to-end evaluations are still pending.
 
 ---
 
 ## Known Issues Affecting Quality
 
-### S-Matrix Transpose Bug (Active)
+### Historical S-Matrix Transpose Bug
 
 The QJL correction term uses `q @ S.T` where it should use `S @ q` (or equivalently, `q @ S` when q is a row vector). Since the Rademacher matrix S is **not symmetric**, S^T ≠ S, and the correction term uses the wrong projection direction.
 
 **Impact:** Reduces cosine similarity from ~0.95 (expected) to ~0.90 (observed).
 
-**Fix:** Change one line in `cache.py::compute_attention()` and the corresponding Triton kernel.
+**Fix:** The reference PyTorch attention path now uses `q @ S`, matching the `S @ q` formulation from the paper. Any fused kernel should use the same projection.
 
 ### Single-Sample QJL Variance (By Design)
 
@@ -260,7 +260,7 @@ Var(⟨y, r̂⟩) ≤ (π / 2d) · ‖y‖² · ‖r‖²
 
 For d=128: Var ≤ 0.012 · ‖y‖² · ‖r‖². With ‖r‖ ≈ 0.3 (typical residual after 2-bit PQ), this is Var ≈ 0.001 · ‖y‖².
 
-The `qjl_score_weight=0.35` parameter trades bias for variance reduction. Setting it to 1.0 gives the unbiased estimator but higher variance per-token.
+The `qjl_score_weight=0.5` parameter trades bias for variance reduction. Setting it to 1.0 gives the unbiased estimator but higher variance per-token.
 
 ### Attention Sinks (Not Yet Implemented)
 

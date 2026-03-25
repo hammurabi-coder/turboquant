@@ -21,14 +21,14 @@ setup(
     name="turboquant-vllm-plugin",
     version="0.1.0",
     description=(
-        "TurboQuant: 3.5-bit KV cache compression for vLLM — "
+        "TurboQuant: low-bit KV cache compression for vLLM — "
         "PolarQuant + QJL with near-zero accuracy loss"
     ),
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="TurboQuant Contributors",
-    license="Apache-2.0",
-    url="https://github.com/your-org/turboquant-vllm-plugin",
+    license="MIT",
+    url="https://github.com/OnlyTerp/turboquant",
     packages=find_packages(),
     python_requires=">=3.10",
     install_requires=[
@@ -51,7 +51,7 @@ setup(
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: Apache Software License",
+        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",

@@ -4,7 +4,7 @@ TurboQuant — LUT-Based Fused Attention Kernel
 The crown jewel of TurboQuant: replaces Q×K dot products with lookup table
 (LUT) operations, enabling 8× speedup over FP32 attention on H100/5090.
 
-CORE INSIGHT (from TurboQuant paper §4, RESEARCH.md §1.4):
+CORE INSIGHT (from TurboQuant paper §4):
 ─────────────────────────────────────────────────────────
 Standard attention inner product:
     score = Σᵢ q[i] * k[i]           ← 128 multiplies + 128 adds
@@ -29,9 +29,9 @@ Why this beats FP16 attention on H100/5090:
   - The LUT replaces multiplies with table lookups, which are faster on modern GPUs
   - Combined: the paper measures 8× on H100 at 4-bit; 2-bit should see ~6-7× here
 
-Architecture of this kernel (following FlashAttention tiling from RESEARCH.md §3.5):
+Architecture of this kernel (following the standard FlashAttention tiling pattern):
   1. Build LUT in shared memory (128×4 = 512 fp32 entries = 2KB) — once per query
-  2. Precompute S·q for QJL correction (RESEARCH.md §3.6 pattern) — once per query
+  2. Precompute S·q for QJL correction — once per query
   3. Tile over sequence in BLOCK_SEQ chunks:
      - Load packed 2-bit key indices (very small, fits in registers)
      - Unpack indices, look up LUT → attention score (no multiplies!)
@@ -49,7 +49,7 @@ References:
   - TurboQuant: arxiv 2504.19874
   - QJL: arxiv 2406.03482
   - FlashAttention: Dao et al. 2022 (online softmax pattern)
-  - Fused dequant+GEMM: RESEARCH.md §3.6
+  - Fused dequant+GEMM patterns from production attention kernels
 """
 
 import math
@@ -664,7 +664,7 @@ def _precompute_query_tensors(
     gen = torch.Generator(device="cpu")
     gen.manual_seed(qjl_seed)
     S = torch.randint(0, 2, (d, d), generator=gen).float().to(device) * 2 - 1
-    q_proj = q @ S.t()   # [n_queries, d]
+    q_proj = q @ S       # [n_queries, d]
 
     return q_rot.contiguous(), q_proj.contiguous()
 

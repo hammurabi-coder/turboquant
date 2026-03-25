@@ -437,7 +437,7 @@ class TurboQuantCache:
 
     def compute_attention(
         self, layer_idx: int, head_idx: int, q_vec: torch.Tensor, causal: bool = True,
-        qjl_score_weight: float = 0.3,
+        qjl_score_weight: float = 0.5,
     ) -> torch.Tensor:
         """Compute attention output using compressed KV cache.
 

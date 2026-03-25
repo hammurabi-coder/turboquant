@@ -172,7 +172,7 @@ The plugin uses `try/except` for vLLM imports, so tests can run without vLLM ins
 ## Known Limitations
 
 - **Triton kernels not yet integrated:** Current implementation uses pure PyTorch. Triton kernels for FWHT and fused dequant+attention are planned.
-- **Accuracy in progress:** Cosine similarity is being debugged (S-matrix transpose bug identified). See `PLAN.md` Phase 1.
+- **Accuracy in progress:** The reference kernels recently fixed the QJL projection transpose bug; end-to-end quality still needs broader validation.
 - **Paged cache bypassed:** TurboQuant manages its own compressed storage; vLLM's paged KV cache allocation is not used for KV data.
 - **Attention sinks:** First few tokens are not yet preserved in higher precision (planned).
 
@@ -180,4 +180,4 @@ The plugin uses `try/except` for vLLM imports, so tests can run without vLLM ins
 
 ## License
 
-Apache-2.0
+MIT
