@@ -115,12 +115,12 @@ def fwht_kernel(
         h: tl.constexpr = 1 << stage
         # For each element, decide if it is the "upper" (j+h) element of a pair.
         is_upper = (offsets & h) != 0
-        partner  = tl.where(is_upper, offsets - h, offsets + h)
+        partner  = offsets ^ h
 
         val  = tl.load(x_ptr + base + offsets)
         pval = tl.load(x_ptr + base + partner)
 
-        new_val = tl.where(is_upper, val - pval, val + pval)
+        new_val = tl.where(is_upper, pval - val, val + pval)
         tl.store(x_ptr + base + offsets, new_val)
 
     # Done — the result is H·x (unnormalised)
@@ -233,11 +233,11 @@ def polarquant_encode_kernel(
     for stage in tl.static_range(7):
         h: tl.constexpr = 1 << stage
         is_upper = (offsets & h) != 0
-        partner  = tl.where(is_upper, offsets - h, offsets + h)
+        partner  = offsets ^ h
 
         val  = tl.load(scratch + offsets)
         pval = tl.load(scratch + partner)
-        new_val = tl.where(is_upper, val - pval, val + pval)
+        new_val = tl.where(is_upper, pval - val, val + pval)
         tl.store(scratch + offsets, new_val)
 
     x = tl.load(scratch + offsets)
@@ -398,10 +398,10 @@ def polarquant_decode_kernel(
     for stage in tl.static_range(7):
         h: tl.constexpr = 1 << stage
         is_upper = (offsets & h) != 0
-        partner  = tl.where(is_upper, offsets - h, offsets + h)
+        partner  = offsets ^ h
         v  = tl.load(scratch + offsets)
         vp = tl.load(scratch + partner)
-        tl.store(scratch + offsets, tl.where(is_upper, v - vp, v + vp))
+        tl.store(scratch + offsets, tl.where(is_upper, vp - v, v + vp))
 
     val = tl.load(scratch + offsets)
 
